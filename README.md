@@ -1,138 +1,456 @@
-# DigitalWallet API 💳
+# Digital Wallet API
 
-A RESTful API for digital wallet operations including user management, transactions, and balance tracking.
+A secure, production-ready RESTful API for managing digital wallets, transactions, and user accounts. Built with Node.js, Express, and MongoDB.
 
-## 📁 Project Structure
-DigitalWalletApi/
-├── src/
-│ ├── controllers/ # Route handlers
-│ ├── models/ # Data models
-│ ├── routes/ # API routes
-│ ├── middleware/ # Custom middleware
-│ ├── config/ # Configuration files
-│ ├── utils/ # Utility functions
-│ └── app.js # Main application file
-├── package.json
-└── README.md
+## Features
 
-text
+### Authentication & Security
+- JWT-based authentication with access and refresh tokens
+- Email verification system
+- Password reset functionality
+- Bcrypt password hashing
+- PIN protection for sensitive operations
+- Multi-layer rate limiting (auth, wallet operations, high-value transactions)
+- IP banning after repeated abuse attempts
+- Security headers (Helmet, CORS, XSS protection, NoSQL injection prevention)
 
-## 🚀 Features
+### Wallet Management
+- Create multiple wallets per user
+- Support for multiple currencies (USD, EGP, EUR)
+- Wallet status management (active, suspended, frozen)
+- PIN-protected operations
 
-- **User Management** - Register, authenticate, and manage users
-- **Wallet Operations** - Deposit, withdraw, and transfer funds
-- **Transaction History** - Track all financial transactions
-- **Security** - JWT authentication and data validation
-- **RESTful API** - Clean and consistent API endpoints
+### Transactions
+- Deposit funds
+- Withdraw funds (PIN-required)
+- Peer-to-peer money transfers
+- Transaction history with filtering and sorting
+- Atomic transactions using Mongoose sessions
+- Transaction cancellation workflow with admin approval
 
-## 🛠️ Installation
+### Admin Features
+- Role-based access control
+- Review and approve/reject cancellation requests
+- View all user wallets and transactions
+
+## Tech Stack
+
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: JWT (jsonwebtoken)
+- **Validation**: Joi
+- **Security**: bcrypt, helmet, cors, express-rate-limit, xss-clean, express-mongo-sanitize, hpp
+- **Email**: Nodemailer
+
+## Installation
+
+### Prerequisites
+- Node.js (v14 or higher)
+- MongoDB (local or Atlas)
+- npm or yarn
+
+### Setup
 
 1. **Clone the repository**
-   ```bash
-   git clone https://github.com/abdullrahmanx/DigitalWalletApi.git
-   cd DigitalWalletApi
-2. Install dependencies
-  npm install
+```bash
+git clone https://github.com/abdullrahmanx/DigitalWalletApi.git
+cd DigitalWalletApi
+```
 
+2. **Install dependencies**
+```bash
+npm install
+```
 
-3. Set up environment variables
-  cp .env.example .env
-  # Edit .env with your configuration
+3. **Environment Variables**
 
+Create a `.env` file in the root directory (copy from `.env.example`):
 
-  
-4. Start the server
-  # Development
-  npm run dev
-  # Production
-  npm start
-
-  
-⚙️ Environment Configuration
-Create a .env file in the root directory:
-
-env
+```env
 # Server Configuration
 PORT=3000
 NODE_ENV=development
 
 # Database
-MONGODB_URI=mongodb://localhost:27017/digitalwallet
-DB_NAME=digitalwallet
+MONGO_URL=mongodb://localhost:27017/digital-wallet
 
-# JWT Authentication
-JWT_SECRET=your_super_secret_jwt_key_here
-JWT_EXPIRE=30d
+# JWT Secrets
+JWT_SECRET=your_jwt_secret_key_here
+JWT_REFRESH=your_jwt_refresh_secret_here
 
-# Security
-BCRYPT_SALT_ROUNDS=12
-CORS_ORIGIN=http://localhost:3000
-📚 API Endpoints
-Authentication
-POST /api/auth/register - Create new user account
+# Email Configuration
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+EMAIL_FROM='"Digital Wallet API" <no-reply@yourapp.com>'
 
-POST /api/auth/login - User login
+# Frontend URL
+FRONT_URL=http://localhost:3000
+```
 
-POST /api/auth/logout - User logout
+**Important Notes:**
+- Never commit your `.env` file to Git
+- For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833), not your regular password
+- Generate strong JWT secrets using: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 
-Wallet Operations
-GET /api/wallet/balance - Get wallet balance
+4. **Start the server**
+```bash
+npm start
+```
 
-POST /api/wallet/deposit - Deposit funds
+The API will be available at `http://localhost:3000`
 
-POST /api/wallet/withdraw - Withdraw funds
+## API Documentation
 
-POST /api/wallet/transfer - Transfer to another user
+### Base URL
+```
+http://localhost:3000
+```
 
-Transactions
-GET /api/transactions - Get transaction history
+### Authentication Endpoints
 
-GET /api/transactions/:id - Get specific transaction
+#### Register User
+```http
+POST /auth/register
+Content-Type: application/json
 
-🧪 Usage Example
-javascript
-// Register a new user
-const response = await fetch('/api/auth/register', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    name: 'John Doe',
-    email: 'john@example.com',
-    password: 'securepassword'
-  })
-});
-🛡️ Security Features
-Password hashing with bcrypt
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123",
+  "phone": "+1234567890"
+}
+```
 
-JWT token authentication
+#### Verify Email
+```http
+GET /auth/verify-email/:token
+```
 
-Input validation and sanitization
+#### Login
+```http
+POST /auth/login
+Content-Type: application/json
 
-CORS protection
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+```
 
-Rate limiting
+#### Refresh Token
+```http
+POST /auth/refresh-token
+Content-Type: application/json
 
-🤝 Contributing
-Fork the project
+{
+  "refreshToken": "your_refresh_token"
+}
+```
 
-Create your feature branch (git checkout -b feature/AmazingFeature)
+#### Logout
+```http
+POST /auth/logout
+Content-Type: application/json
 
-Commit your changes (git commit -m 'Add some AmazingFeature')
+{
+  "refreshToken": "your_refresh_token"
+}
+```
 
-Push to the branch (git push origin feature/AmazingFeature)
+#### Change Password
+```http
+PUT /auth/password
+Authorization: Bearer <access_token>
+Content-Type: application/json
 
-Open a Pull Request
+{
+  "currentPassword": "oldpassword",
+  "newPassword": "newpassword"
+}
+```
 
-📄 License
-This project is licensed under the MIT License.
+#### Forgot Password
+```http
+POST /auth/forgot-password
+Content-Type: application/json
 
-👤 Author
-Abdullrahman
+{
+  "email": "john@example.com"
+}
+```
 
-GitHub: @abdullrahmanx
+#### Reset Password
+```http
+POST /auth/reset-password/:token
+Content-Type: application/json
 
+{
+  "newPassword": "newpassword123"
+}
+```
 
+### User Endpoints
 
+#### Get User Profile
+```http
+GET /user/me
+Authorization: Bearer <access_token>
+```
 
+#### Update Profile
+```http
+PUT /user/me
+Authorization: Bearer <access_token>
+Content-Type: application/json
 
-   
+{
+  "name": "John Updated",
+  "phone": "+9876543210"
+}
+```
+
+### Wallet Endpoints
+
+#### Create Wallet
+```http
+POST /wallets
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "pin": "1234",
+  "currency": "USD"
+}
+```
+
+#### Get All Wallets
+```http
+GET /wallets?page=1&limit=10&currency=USD&sortBy=createdAt&sortOrder=desc
+Authorization: Bearer <access_token>
+```
+
+#### Get Single Wallet
+```http
+GET /wallets/:id
+Authorization: Bearer <access_token>
+```
+
+#### Update Wallet
+```http
+PUT /wallets/:id
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "pin": "5678",
+  "currency": "EUR",
+  "status": "active"
+}
+```
+
+#### Delete Wallet
+```http
+DELETE /wallets/:id
+Authorization: Bearer <access_token>
+```
+
+#### Deposit Money
+```http
+POST /wallets/deposit/:id
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "amount": 100,
+  "description": "Salary deposit"
+}
+```
+
+#### Withdraw Money
+```http
+POST /wallets/withdraw/:id
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "amount": 50,
+  "pin": "1234"
+}
+```
+
+#### Send Money (P2P Transfer)
+```http
+POST /wallets/send-money/:id
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "recipientWalletId": "recipient_wallet_id",
+  "amount": 25,
+  "description": "Payment for lunch"
+}
+```
+
+### Transaction Endpoints
+
+#### Get Transaction History
+```http
+GET /transactions/history?status=completed&type=deposit&sortBy=createdAt&order=desc
+Authorization: Bearer <access_token>
+```
+
+#### Get Single Transaction
+```http
+GET /transactions/:id
+Authorization: Bearer <access_token>
+```
+
+#### Request Transaction Cancellation
+```http
+POST /transactions/cancel-request/:id
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "reason": "Sent to wrong wallet by mistake"
+}
+```
+
+#### Get Cancellation Requests (Admin Only)
+```http
+GET /transactions/cancel-requests?page=1&limit=10&status=pending
+Authorization: Bearer <admin_access_token>
+```
+
+#### Approve Cancellation (Admin Only)
+```http
+POST /transactions/cancel-approve/:id
+Authorization: Bearer <admin_access_token>
+Content-Type: application/json
+
+{
+  "adminReason": "Valid reason provided"
+}
+```
+
+#### Reject Cancellation (Admin Only)
+```http
+POST /transactions/cancel-reject/:id
+Authorization: Bearer <admin_access_token>
+Content-Type: application/json
+
+{
+  "adminReason": "Transaction already completed"
+}
+```
+
+## Security Features
+
+### Rate Limiting
+- **Auth endpoints**: 5 requests per 15 minutes
+- **Wallet read operations**: 2 requests per 15 seconds
+- **Wallet write operations**: 1 request per 15 seconds
+- **High-value transfers** (>$1000): 3 requests per 5 minutes
+- **Global limit**: 100 requests per 15 minutes
+
+### IP Banning
+- After 50 failed login attempts, IP is permanently banned
+- After 5 failed attempts, 15-minute cooldown period
+
+### Transaction Safety
+- Mongoose transactions ensure atomic operations
+- Wallets can be frozen or suspended
+- Currency validation prevents cross-currency transfers
+- 24-hour window for transaction cancellations
+
+## Project Structure
+
+```
+DigitalWalletApi/
+├── controllers/
+│   ├── userController.js
+│   └── walletController.js
+├── middlewares/
+│   ├── cors.js
+│   ├── errorHandler.js
+│   ├── rateLimit.js
+│   ├── userValidation.js
+│   ├── validateTransactionCancellation.js
+│   ├── verifyRole.js
+│   ├── verifyToken.js
+│   └── walletValidation.js
+├── models/
+│   ├── userModel.js
+│   ├── walletModel.js
+│   ├── transactionModel.js
+│   └── cancelTransactionModel.js
+├── routes/
+│   ├── authRoutes.js
+│   ├── userRoutes.js
+│   ├── walletRoutes.js
+│   └── transactionRoutes.js
+├── utils/
+│   ├── appError.js
+│   ├── email.js
+│   └── transactionCancel.js
+├── .env.example
+├── .gitignore
+├── server.js
+├── package.json
+└── README.md
+```
+
+## Error Handling
+
+The API uses a centralized error handling middleware that catches:
+- Validation errors
+- Duplicate key errors
+- Cast errors (invalid MongoDB IDs)
+- Custom application errors
+
+All errors return a consistent JSON format:
+```json
+{
+  "status": "Error",
+  "message": "Error description"
+}
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## Future Enhancements
+
+- [ ] Add unit and integration tests
+- [ ] Implement webhook notifications
+- [ ] Add support for more currencies
+- [ ] Transaction receipts and statements
+- [ ] Two-factor authentication (2FA)
+- [ ] KYC verification system
+- [ ] Transaction limits per user tier
+- [ ] Export transaction history (CSV/PDF)
+
+## License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## Author
+
+**Abdullrahman**
+- GitHub: [@abdullrahmanx](https://github.com/abdullrahmanx)
+
+## Support
+
+For issues, questions, or suggestions, please open an issue on GitHub.
+
+---
+
+**Note**: This is a demonstration project. For production use, ensure proper security audits, compliance with financial regulations, and additional features like proper logging, monitoring, and backup strategies.
