@@ -1,21 +1,35 @@
 const express=require('express')
 const router= express.Router()
 const verifyToken= require('../middlewares/verifyToken')
-const controller= require('../controllers/walletController')
 const { validateCreateWallet, validateUpdateWallet } = require('../middlewares/walletValidation')
 const { walletReadLimiter, walletWriteLimiter, criticalLimiter, highValueLimiter } = require('../middlewares/rateLimit')
+const {getWallets,
+    getWallet,
+    createWallet,
+    updateWallet,
+    deleteWallet,
+    deposit
+    ,withdraw,
+    sendMoney } = require('../controllers/walletController')
 
-router.get('/',verifyToken,controller.getWallets)
-router.get('/:id',verifyToken,controller.getWallet)
-router.post('/',verifyToken,validateCreateWallet,controller.createWallet)
-router.put('/:id',verifyToken,validateUpdateWallet,controller.updateWallet)
-router.delete('/:id', verifyToken,controller.deleteWallet)
+    
+router.get('/',walletReadLimiter,verifyToken,getWallets)
+
+router.get('/:id',walletReadLimiter,verifyToken,getWallet)
+
+router.post('/',walletWriteLimiter,verifyToken,validateCreateWallet,createWallet)
+
+router.put('/:id',walletWriteLimiter,verifyToken,validateUpdateWallet,updateWallet)
+
+router.delete('/:id', walletWriteLimiter,verifyToken,deleteWallet)
 
 
 
-router.post('/deposit/:id',verifyToken,controller.deposit)
-router.post('/withdraw/:id',verifyToken,controller.withdraw)
-router.post('/send-money/:id',verifyToken,controller.sendMoney)
+router.post('/deposit/:id',criticalLimiter,verifyToken,deposit)
+
+router.post('/withdraw/:id',criticalLimiter,verifyToken,withdraw)
+
+router.post('/send-money/:id',criticalLimiter,verifyToken,sendMoney)
 
 
 

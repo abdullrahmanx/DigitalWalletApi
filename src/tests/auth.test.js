@@ -46,7 +46,7 @@ describe('Authentication API', () => {
                 .post('/auth/register')
                 .send(userData)
             expect(response.statusCode).toBe(201);
-            expect(response.body.status).toBe('Success');
+            expect(response.body.success).toBe(true);
             expect(response.body.message).toContain('created');
             expect(response.body.data.name).toBe(userData.name)
             expect(response.body.data.email).toBe(userData.email);
@@ -67,7 +67,7 @@ describe('Authentication API', () => {
                   .post('/auth/register')
                   .send(userData)
                   .expect(400)
-            expect(response.body.status).toBe('Error')
+            expect(response.body.success).toBe()
             expect(response.body.message).toContain('Email already used')      
         });
 
@@ -81,7 +81,7 @@ describe('Authentication API', () => {
                   .post('/auth/register')
                   .send(userData)
                   .expect(400)
-            expect(response.body.status).toBe('Error')
+            expect(response.body.success).toBe()
             expect(response.body.message).toContain('Name is required')   
         });
         
@@ -95,7 +95,7 @@ describe('Authentication API', () => {
                   .post('/auth/register')
                   .send(userData)
                   .expect(400)
-            expect(response.body.status).toBe('Error')
+            expect(response.body.success).toBe()
             expect(response.body.message).toContain('Email is required')   
         });
          it('should fail with missing password', async () => {
@@ -108,7 +108,7 @@ describe('Authentication API', () => {
                   .post('/auth/register')
                   .send(userData)
                   .expect(400)
-            expect(response.body.status).toBe('Error')
+            expect(response.body.success).toBe()
             expect(response.body.message).toContain('Password is required')   
         });
         
@@ -123,7 +123,7 @@ describe('Authentication API', () => {
                 .post('/auth/register')
                 .send(userData)
                 .expect(400)
-            expect(response.body.status).toBe('Error')
+            expect(response.body.success).toBe()
             expect(response.body.message).toContain('valid email address')
         })
         it('should fail with short password', async () => {
@@ -139,7 +139,7 @@ describe('Authentication API', () => {
                 .send(userData)
                 .expect(400);
 
-            expect(response.body.status).toBe('Error');
+            expect(response.body.success).toBe();
             expect(response.body.message).toContain('6 characters');
         });
     })
@@ -156,7 +156,7 @@ describe('Authentication API', () => {
                     password: userData.password
                 })
                 .expect(200)
-            expect(response.body.status).toBe('Success')
+            expect(response.body.success).toBe(true)
             expect(response.body.message).toContain('successfully')  
             expect(response.body.token.accessToken).toBeDefined() 
             expect(response.body.token.refreshToken).toBeDefined() 
@@ -175,7 +175,7 @@ describe('Authentication API', () => {
                     password: 'wrongpass'
                 })
                 .expect(401)
-            expect(response.body.status).toBe('Error'),
+            expect(response.body.success).toBe(),
             expect(response.body.message).toContain('Invalid')
             expect(response.body.token).toBeUndefined()
        })
@@ -193,7 +193,7 @@ describe('Authentication API', () => {
 
             console.log(response.body.message)    
             
-            expect(response.body.status).toBe('Error')
+            expect(response.body.success).toBe()
             expect(response.body.message).toContain('valid')
        })
 
@@ -208,7 +208,7 @@ describe('Authentication API', () => {
                 })
                 .expect(401)
             
-                expect(response.body.status).toBe('Error')
+                expect(response.body.success).toBe()
                 expect(response.body.message).toContain('valid')
                 expect(response.body.token).toBeUndefined();
        })
@@ -223,7 +223,7 @@ describe('Authentication API', () => {
             })
             .expect(400)
 
-         expect(response.body.status).toBe('Error')  
+         expect(response.body.success).toBe()  
          expect(response.body.message).toContain('required')
        })
 
@@ -237,7 +237,7 @@ describe('Authentication API', () => {
             })
             .expect(400)
 
-         expect(response.body.status).toBe('Error')  
+         expect(response.body.success).toBe()  
          expect(response.body.message).toContain('required')
        })
 
@@ -286,7 +286,7 @@ describe('Authentication API', () => {
                 .set('Authorization', `Bearer ${token}`)
                 .expect(200)
             
-            expect(response.body.status).toBe('Success')
+            expect(response.body.success).toBe(true)
             expect(response.body.data.email).toBe(userData.email)
             expect(response.body.data.name).toBe(userData.name)
             expect(response.body.data.phone).toBe(userData.phone)
@@ -301,7 +301,7 @@ describe('Authentication API', () => {
                 .set('Authorization', `Bearer ${token}`)
                 .send(updatedData)
                 .expect(200)
-            expect(response.body.status).toBe('Success');
+            expect(response.body.success).toBe(true);
             expect(response.body.data.name).toBe(updatedData.name);
             expect(response.body.data.phone).toBe(updatedData.phone);    
         })
@@ -314,7 +314,7 @@ describe('Authentication API', () => {
                 .set('Authorization', `Bearer ${token}`)
                 .send(updatedData)
                 .expect(400)
-            expect(response.body.status).toBe('Error')
+            expect(response.body.success).toBe(false)
             expect(response.body.message).toMatch(/number|empty/)
         })
     })

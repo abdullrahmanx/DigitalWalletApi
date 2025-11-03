@@ -7,7 +7,8 @@ const walletModel = require('../models/walletModel');
 const mongoose=require('mongoose')
 const validateCancellationEligibility= require('../middlewares/validateTransactionCancellation');
 const processCancellation = require('../utils/transactionCancel');
-const createWallet= async (req,res,next) => {
+
+exports.createWallet= async (req,res,next) => {
     try {
         const userId= req.user.id
         const {pin,currency}= req.body;
@@ -27,7 +28,7 @@ const createWallet= async (req,res,next) => {
         })
         
         res.status(201).json({
-            status: 'Success',
+            success: true,
             message: 'Wallet created successfully',
             data: {
                 wallet: wallet._id,
@@ -41,7 +42,8 @@ const createWallet= async (req,res,next) => {
         next(error)
     }
 }
-const getWallets= async (req,res,next) => {
+
+exports.getWallets= async (req,res,next) => {
     try {
     const {
         page= 1,
@@ -84,7 +86,7 @@ const getWallets= async (req,res,next) => {
         nextPage: currentPage < totalPages ? currentPage + 1 : null
     }
     res.status(200).json({
-        status: 'Success',
+        success: true,
         data: {
             wallets,
             pagination
@@ -95,7 +97,8 @@ const getWallets= async (req,res,next) => {
 }
 
 }
-const getWallet= async (req,res,next) => {
+
+exports.getWallet= async (req,res,next) => {
     try {
         const userId= req.user.id
         const {id} = req.params;
@@ -104,7 +107,7 @@ const getWallet= async (req,res,next) => {
             return next(new AppError(404,'Error','Wallet not found'))
         }
         res.status(200).json({
-            status: 'Success',
+            success: true,
             data:  {
                 wallet
             }
@@ -114,42 +117,57 @@ const getWallet= async (req,res,next) => {
         next(error)
     }
 }
-const updateWallet= async (req,res,next) => {
+
+exports.updateWallet= async (req, res, next) => {
     try {
-        const {currency, status,pin} = req.body
-        const userId= req.user.id
+        const {status, currency, pin}= req.body;
+        const updatedData={};
         
-        const updatedData= {}
-        if(currency) updatedData.currency= currency;
-        if(status) updatedData.status= status
-        if(pin.length < 4 || pin.length > 6) {
-            return next(new AppError(400,'Error','Pin must be 4-6 digits'))
-        }       
-        const hashedPin= await bcrypt.hash(pin,12)
-        updatedData.pin= hashedPin
-
-        const wallet= await Wallet.findOneAndUpdate({user: userId},
-            updatedData,{new: true, runValidators: true})
-
-
-        if(!wallet) {
-            return next(new AppError(400,'Error','Wallet not found'))
+        if(status) {
+            if(!['active','inactive','suspended'].includes(status)) {
+                return next(new AppError(400,'Error','Invalid status'))
+            }
+            updatedData.status= status;
         }
+        
+        if(currency) {
+            if(!['USD','EUR','GBP','NGN'].includes(currency)) {
+                return next(new AppError(400,'Error','Invalid currency'))
+            }
+            updatedData.currency= currency;
+        }
+        
+        if(pin) {
+            if(typeof pin !== 'string' || !/^\d{4,6}$/.test(pin)) {
+                return next(new AppError(400,'Error','Pin must be 4-6 digits'))
+            }
+            const hashedPin = await bcrypt.hash(pin, 12);
+            updatedData.pin = hashedPin;
+        }
+        
+        const wallet= await Wallet.findOneAndUpdate(
+            {user: req.user.id},
+            updatedData,
+            {new: true, runValidators: true}
+        );
+        
+        if(!wallet) {
+            return next(new AppError(404,'Error','Wallet not found'))
+        }
+        
         res.status(200).json({
             status: 'Success',
-            message: 'Wallet updated successfully',
             data: {
-                id: wallet._id,
-                currency: wallet.currency,
-                status: wallet.status
+                wallet
             }
         })
     } catch(error) {
-    next(error)
+        console.log(error);
+        next(error);
     }
 }
 
-const deleteWallet= async (req,res,next) => {
+exports.deleteWallet= async (req,res,next) => {
     try {
     const {id} = req.params;
 
@@ -173,48 +191,40 @@ const deleteWallet= async (req,res,next) => {
     }
 }
 
-const deposit= async(req,res,next) => {
+exports.deposit= async(req,res,next) => {
     try {
-        const {amount,description} = req.body
-        const userId= req.user.id
-        const {id} = req.params
-        const wallet= await Wallet.findOne({user: userId, _id: id})
+        let {amount}= req.body;
+        
+     
+        amount = Number(amount);
+        if(isNaN(amount) || amount <= 0) {
+            return next(new AppError(400, 'Error', 'Invalid amount'));
+        }
+        
+        const wallet= await Wallet.findOne({user: req.user.id});
         if(!wallet) {
             return next(new AppError(404,'Error','Wallet not found'))
         }
-        if(amount <= 0 || !amount){
-            return next(new AppError(400,'Error','Amount cannot be less or equal zero'))
+      
+        if(wallet.status !== 'active') {
+            return next(new AppError(403, 'Error', `Wallet is ${wallet.status}. Cannot deposit.`));
         }
+        
+        wallet.balance += amount;
+        await wallet.save();
+        
         const transaction= await Transaction.create({
             wallet: wallet._id,
             type: 'deposit',
             amount,
-            description: description || 'Deposit',
-            status: 'completed',
-        })
-        wallet.balance += amount
-        wallet.transactions.push(transaction._id)
+            balanceAfter: wallet.balance,
+            status: 'completed'
+        });
         
-        await transaction.save()
-        await wallet.save()
-
         res.status(200).json({
             status: 'Success',
-            message: 'Deposit successful',
             data: {
-             transaction: {
-                id: transaction._id,
-                type: transaction.type,
-                amount: transaction.amount,
-                description: transaction.description,
-                status: transaction.status,
-                createdAt: transaction.createdAt
-            },
-            wallet: {
-                id: wallet._id,
-                balance: wallet.balance,
-                currency: wallet.currency
-            }
+                transaction
             }
         })
     } catch(error) {
@@ -222,67 +232,54 @@ const deposit= async(req,res,next) => {
     }
 }
 
-const withdraw = async (req, res, next) => {
+exports.withdraw = async (req, res, next) => {
   try {
-    const userId = req.user.id;
-    const { id } = req.params;
-    const { amount, pin } = req.body;
-    if(!amount || !pin) {
-        return next(new AppError(400,'Error','Amount and pin are required'))
-    }
-    if (amount <= 0) {
-      return next(new AppError(400, "Error", "Amount must be greater than zero"));
-    }
-    if(pin.length < 4  || pin.length > 6){
-        return next(new AppError(400,'Error','Pin must be 4-6 digits'))
-    }
-
-    const wallet = await Wallet.findOne({ _id: id, user: userId });
-    if (!wallet) {
-      return next(new AppError(404, "Error", "Wallet not found"));
-    }
-  
-    const isMatch = await bcrypt.compare(pin, wallet.pin);
-
-    if (!isMatch) {
-      return next(new AppError(401, "Error", "Invalid PIN"));
-    }
-
-    if (wallet.balance < amount) {
-      return next(new AppError(400, "Error", "Insufficient funds"));
-    }
-
-    const transaction = await Transaction.create({
-      wallet: wallet._id,
-      type: "withdraw",
-      amount,
-      status: "completed",
-      description: "Withdraw for now",
-    });
-
-    wallet.balance -= amount;
-    wallet.transactions.push(transaction._id);
-    await wallet.save();
-
-    res.status(200).json({
-      status: "Success",
-      message: "Withdraw successful",
-      data: {
-        transaction: {
-          id: transaction._id,
-          type: transaction.type,
-          amount: transaction.amount,
-          description: transaction.description,
-          status: transaction.status,
-          createdAt: transaction.createdAt,
-        },
-        wallet: {
-          id: wallet._id,
-          balance: wallet.balance,
-          currency: wallet.currency,
-        },
-      },
-    });
+     let {amount, pin}= req.body;
+        
+        amount = Number(amount);
+        if(isNaN(amount) || amount <= 0) {
+            return next(new AppError(400, 'Error', 'Invalid amount'));
+        }
+        
+        const wallet= await Wallet.findOne({user: req.user.id}).select('+pin');
+        if(!wallet) {
+            return next(new AppError(404,'Error','Wallet not found'))
+        }
+        
+        if(wallet.status !== 'active') {
+            return next(new AppError(403, 'Error', `Wallet is ${wallet.status}. Cannot withdraw.`));
+        }
+        
+        if(!pin) {
+            return next(new AppError(400, 'Error', 'PIN is required'));
+        }
+        
+        const isValidPin= await bcrypt.compare(pin, wallet.pin);
+        if(!isValidPin) {
+            return next(new AppError(401,'Error','Invalid pin'))
+        }
+        
+        if(wallet.balance < amount) {
+            return next(new AppError(400,'Error','Insufficient balance'))
+        }
+        
+        wallet.balance -= amount;
+        await wallet.save();
+        
+        const transaction= await Transaction.create({
+            wallet: wallet._id,
+            type: 'withdraw',
+            amount,
+            balanceAfter: wallet.balance,
+            status: 'completed'
+        });
+        
+        res.status(200).json({
+            status: 'Success',
+            data: {
+                transaction
+            }
+        })
   } catch (error) {
     next(error);
   }
@@ -291,107 +288,106 @@ const withdraw = async (req, res, next) => {
 
 
 
-const sendMoney= async(req,res,next) => {
-    const session= await mongoose.startSession()
-    session.startTransaction()
+exports.sendMoney= async(req,res,next) => {
+    const session= await mongoose.startSession();
+    session.startTransaction();
+    
     try {
-        const userId= req.user.id;
-        const {recipientWalletId, amount , description}= req.body;
-        const {id} = req.params
+        let {amount, recipientWalletId, pin}= req.body;
         
-        if(amount <= 0) {
-            return next(new AppError(400, "Error", "Amount must be greater than zero"));
-        }
-      
-        if(id === recipientWalletId) {
-            return next(new AppError(400, "Error", "You cannot send money to yourself"));
-        }
-        const senderWallet= await Wallet.findOne({_id: id, user: userId}).session(session)
-
-        if(!senderWallet) {
-            return next(new AppError(404,'Error','Sender wallet not found'))
-        }
-
        
-        if(senderWallet.status === 'frozen' || senderWallet.status === 'suspended'){
-            return next(new AppError(400,'Error','Sender wallet is suspended or frozen'))
+        amount = Number(amount);
+        if(isNaN(amount) || amount <= 0) {
+            await session.abortTransaction();
+            return next(new AppError(400, 'Error', 'Invalid amount'));
         }
         
-        if (senderWallet.balance < amount) {
-        return next(new AppError(400, 'Error', 'Insufficient funds'));
+    
+        if(!mongoose.Types.ObjectId.isValid(recipientWalletId)) {
+            await session.abortTransaction();
+            return next(new AppError(400, 'Error', 'Invalid recipient wallet ID'));
         }
-
-        const recipientWallet= await Wallet.findById(recipientWalletId).session(session)
+        
+        const senderWallet= await Wallet.findOne({user: req.user.id}).select('+pin').session(session);
+        if(!senderWallet) {
+            await session.abortTransaction();
+            return next(new AppError(404,'Error','Your wallet not found'))
+        }
+        
+       
+        if(senderWallet.status !== 'active') {
+            await session.abortTransaction();
+            return next(new AppError(403, 'Error', `Your wallet is ${senderWallet.status}. Cannot send money.`));
+        }
+        
+        
+        if(!pin) {
+            await session.abortTransaction();
+            return next(new AppError(400, 'Error', 'PIN is required'));
+        }
+        
+        const isValidPin= await bcrypt.compare(pin, senderWallet.pin);
+        if(!isValidPin) {
+            await session.abortTransaction();
+            return next(new AppError(401,'Error','Invalid pin'))
+        }
+        
+        const recipientWallet= await Wallet.findById(recipientWalletId).session(session);
         if(!recipientWallet) {
+            await session.abortTransaction();
             return next(new AppError(404,'Error','Recipient wallet not found'))
         }
         
-        if(recipientWallet.status === 'frozen' ||  recipientWallet.status === 'suspended') {
-            return next(new AppError(400,'Error','Recipient wallet is suspended or frozen'))
+        // FIXED: Check recipient wallet status
+        if(recipientWallet.status !== 'active') {
+            await session.abortTransaction();
+            return next(new AppError(403, 'Error', `Recipient wallet is ${recipientWallet.status}. Cannot receive money.`));
         }
-
-        if(senderWallet.currency !== recipientWallet.currency) {
-            return next(new AppError(400,'Error'," Wallet's currency are not the same"))
+        
+        // FIXED: Prevent self-transfer
+        if(senderWallet._id.toString() === recipientWallet._id.toString()) {
+            await session.abortTransaction();
+            return next(new AppError(400, 'Error', 'Cannot transfer to your own wallet'));
         }
-        const senderTransaction= await Transaction.create([{
+        
+        if(senderWallet.balance < amount) {
+            await session.abortTransaction();
+            return next(new AppError(400,'Error','Insufficient balance'))
+        }
+        
+        senderWallet.balance -= amount;
+        recipientWallet.balance += amount;
+        
+        await senderWallet.save({session});
+        await recipientWallet.save({session});
+        
+        const transaction= await Transaction.create([{
             wallet: senderWallet._id,
-            type: 'transfer_out',
+            type: 'transfer',
             amount,
-            description: 'Sending money',
-            status: 'pending',
-            recipientWallet: recipientWallet._id
-        }],{session})
-        const recipientTransaction= await Transaction.create([{
-            wallet: recipientWallet._id,
-            type: 'transfer_in',
-            amount,
-            description: description || 'Money recieved',
-            status: 'pending',
-            senderWallet: senderWallet._id
-        }],{session})
-
-        senderWallet.balance-= amount;
-        recipientWallet.balance+= amount;
-        senderWallet.transactions.push(senderTransaction[0]._id)
-        recipientWallet.transactions.push(recipientTransaction[0]._id)
-
-        await senderWallet.save({session})
-        await recipientWallet.save({session})
-        await session.commitTransaction()
-
+            to: recipientWallet._id,
+            balanceAfter: senderWallet.balance,
+            status: 'completed'
+        }], {session});
+        
+        await session.commitTransaction();
+        
         res.status(200).json({
             status: 'Success',
-            message: 'Send money transaction',
             data: {
-                senderTransaction: {
-                    id: senderTransaction[0]._id,
-                    type: senderTransaction[0].type,
-                    amount: senderTransaction[0].amount,
-                    description: senderTransaction[0].description,
-                    status: senderTransaction[0].status,
-                    recipientWallet: recipientWallet._id,
-                    createdAt: senderTransaction[0].createdAt
-                },
-                senderWallet: {
-                    id: senderWallet._id,
-                    balance: senderWallet.balance,
-                    currency: senderWallet.currency
-                },
-                recipientWallet: {
-                    id: recipientWallet._id,
-                    balance: recipientWallet.balance,
-                    currency: recipientWallet.currency
-                }
+                transaction: transaction[0]
             }
         })
     } catch(error) {
-        await session.abortTransaction()
-        next(error)
+        await session.abortTransaction();
+        console.log(error);
+        next(error);
     } finally {
-        session.endSession()
+        session.endSession();
     }
-} 
-const getTransactionHistory = async (req, res, next) => {
+}
+
+exports.getTransactionHistory = async (req, res, next) => {
   try {
         const { status, type, sortBy = 'createdAt', order = 'desc' } = req.query;
         const wallet = await Wallet.findOne({ user: req.user.id });
@@ -416,7 +412,7 @@ const getTransactionHistory = async (req, res, next) => {
 };
 
 
-const getTransaction= async (req,res,next) => {
+exports.getTransaction= async (req,res,next) => {
     try {
        const {id} = req.params
        const userId = req.user.id 
@@ -452,7 +448,7 @@ const getTransaction= async (req,res,next) => {
     }
 }
 
-const requestTransactionCancellation = async (req,res,next)  => {
+exports.requestTransactionCancellation = async (req,res,next)  => {
     const session = await mongoose.startSession()
     session.startTransaction()
     try {
@@ -507,7 +503,7 @@ const requestTransactionCancellation = async (req,res,next)  => {
     }
 }
 
-const approveCanellation= async (req,res,next) => {
+exports.approveCanellation= async (req,res,next) => {
     const session= await mongoose.startSession()
     session.startTransaction()
     try {
@@ -572,7 +568,7 @@ const approveCanellation= async (req,res,next) => {
 }
 
 
-const rejectCancellation= async (req,res,next) => {
+exports.rejectCancellation= async (req,res,next) => {
     try {
         const adminId= req.user.id;
         const {id} = req.params;
@@ -609,7 +605,7 @@ const rejectCancellation= async (req,res,next) => {
     }
 }
 
-const getCancellationRequests= async (req,res,next)  => {
+exports.getCancellationRequests= async (req,res,next)  => {
     try {
         const { page = 1, limit = 10,status= 'pending', priority, sortBy= 'createdAt',sortOrder= 'desc' }= req.query
         const filter= {}
@@ -654,12 +650,3 @@ const getCancellationRequests= async (req,res,next)  => {
 
 
 
-
-module.exports= {createWallet,
-    getWallets,
-    getWallet,
-    updateWallet,
-    deleteWallet,
-    deposit,withdraw,
-    getTransaction,getTransactionHistory,sendMoney,
-requestTransactionCancellation, getCancellationRequests,approveCanellation,rejectCancellation}

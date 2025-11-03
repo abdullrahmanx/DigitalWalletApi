@@ -1,15 +1,14 @@
 const express= require('express');
 const router= express.Router()
 const verifyToken=require('../middlewares/verifyToken')
-const controller= require('../controllers/userController');
 const { validateProfile } = require('../middlewares/userValidation');
+const {userProfile,updateProfile} = require('../controllers/userController')
 
 
 
+router.get('/me',verifyToken,userProfile)
 
-router.get('/me',verifyToken,controller.userProfile)
-
-router.put('/me',verifyToken,validateProfile,controller.updateProfile)
+router.put('/me',verifyToken,validateProfile,updateProfile)
 
 
 module.exports= router

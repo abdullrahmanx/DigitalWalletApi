@@ -10,7 +10,7 @@ const {sendEmail} = require('../utils/email')
 
 
 
-const signUp= async (req,res,next) => {
+exports.signUp= async (req,res,next) => {
     try {
     const {name,email,password,phone}= req.body;
     if(!name || !email || !password || !phone) {
@@ -62,7 +62,7 @@ const signUp= async (req,res,next) => {
     )
     const userData= await User.findById(user._id).select('-password');
     res.status(201).json({
-        status: 'Success',
+        success: true,
         message: 'User created successfully please verify email',
         data: userData,
         token: {
@@ -74,7 +74,7 @@ const signUp= async (req,res,next) => {
         next(error)
     }
 }
-const verifyEmail = async (req, res, next) => {
+exports.verifyEmail = async (req, res, next) => {
     try {
         const { token } = req.params;
         if (!token) {
@@ -98,7 +98,7 @@ const verifyEmail = async (req, res, next) => {
         await user.save({ validateBeforeSave: false });
 
         res.status(200).json({
-        status: 'Success',
+        success: true,
         message: 'Email verified successfully. You can now log in.'
         });
     } catch (error) {
@@ -106,7 +106,7 @@ const verifyEmail = async (req, res, next) => {
   }
 };
 
-const login= async (req,res,next) => {
+exports.login= async (req,res,next) => {
     const {email, password} =req.body; 
     if(!email || !password ) {
         return next(new AppError(400,'Error','Email and password are required'))
@@ -134,7 +134,7 @@ const login= async (req,res,next) => {
 
     
     res.status(200).json({
-        status: 'Success',
+        success: true,
         message: 'Login successfully',
         token: {
             accessToken,
@@ -143,7 +143,7 @@ const login= async (req,res,next) => {
     })
 
 }
-const refresh= async (req,res,next) => {
+exports.refresh= async (req,res,next) => {
     const {refreshToken} = req.body;
     if (!refreshToken) {
       return next(new AppError(401, "Error", "Refresh token is required"));
@@ -164,11 +164,11 @@ const refresh= async (req,res,next) => {
         process.env.JWT_SECRET, {expiresIn: '15m'}
     )
     res.status(200).json({
-      status: "Success",
+      success: true,
       accessToken
     });
 }
-const logout= async (req,res,next) => {
+exports.logout= async (req,res,next) => {
     try {
         const {refreshToken} = req.body;
         if(!refreshToken) {
@@ -181,14 +181,14 @@ const logout= async (req,res,next) => {
         user.refreshToken= null;
         await user.save()
         res.status(200).json({
-        status: "Success",
+        success: true,
         message: "Logged out successfully"
         });
     } catch(error) {
         next(error)
     }
 }
-const changePassword= async (req,res,next) => {
+exports.changePassword= async (req,res,next) => {
     try {
         const userId= req.user.id;
         const {currentPassword,newPassword}= req.body;
@@ -210,7 +210,7 @@ const changePassword= async (req,res,next) => {
 
         await user.save()
         res.status(200).json({
-            status: "Success",
+            success: true,
             message: 'Password changed successfully'
         })
     } catch(error) {
@@ -219,7 +219,7 @@ const changePassword= async (req,res,next) => {
 }
 
 
-const forgotPassword= async(req,res,next) => {
+exports.forgotPassword= async(req,res,next) => {
     try {
         const { email } = req.body;
         if(!email) {
@@ -247,7 +247,7 @@ const forgotPassword= async(req,res,next) => {
         const emailInfo= await sendPasswordResetEmail(email,resetURL,user.name)
         const previewUrl= nodemailer.getTestMessageUrl(emailInfo)
         res.status(200).json({
-            status: 'Success',
+            success: true,
             message: 'Check your mailbox',
             resetURL,
             previewUrl
@@ -256,7 +256,7 @@ const forgotPassword= async(req,res,next) => {
         next(error)
     }
 }
-const resetPassword= async (req,res,next) => {
+exports.resetPassword= async (req,res,next) => {
     try {
         const { newPassword}= req.body
         const {token} =req.params
@@ -282,7 +282,7 @@ const resetPassword= async (req,res,next) => {
         user.passwordResetToken= undefined;
         await user.save();
         res.status(200).json({
-                status: 'Success',
+                success: true,
                 message: 'Password reset successfully. Please login with your new password.'
         });
     }catch(error) {
@@ -290,10 +290,7 @@ const resetPassword= async (req,res,next) => {
     }
 }
 
-
-
-
-const userProfile= async (req,res,next) => {
+exports.userProfile= async (req,res,next) => {
     try {
         const userId= req.user.id;
         const user= await User.findById(userId)
@@ -303,14 +300,14 @@ const userProfile= async (req,res,next) => {
         const userData= await User.findById(userId).select('-password -refreshToken')
 
         res.status(200).json({
-            status: 'Success',
+            success: true,
             data: userData
         })
     } catch(error) {
         next(error)
     }
 }
-const updateProfile= async (req,res,next) => {
+exports.updateProfile= async (req,res,next) => {
     try {
         const userId= req.user.id
         const {name, phone} = req.body;
@@ -330,7 +327,7 @@ const updateProfile= async (req,res,next) => {
         const updatedData= await User.findById(userId).select('-password -refreshToken')
         
         res.status(200).json({
-            status: 'Success',
+            success: true,
             message: 'Profile updated successfuly',
             data: updatedData
         })
@@ -340,5 +337,3 @@ const updateProfile= async (req,res,next) => {
 }
 
 
-
-module.exports= {signUp,login,verifyEmail,refresh,logout,changePassword,forgotPassword,resetPassword,userProfile,updateProfile}

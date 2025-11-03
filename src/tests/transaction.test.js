@@ -80,7 +80,7 @@ describe('Transaction Cancellation Routes', () => {
             .set('Authorization', `Bearer ${userToken}`)
             .send({reason : 'sorry by mistake'})
             .expect(201)
-        expect(response.body.status).toBe('Success'),
+        expect(response.body.success).toBe(true),
         expect(response.body.message).toContain('Cancellation request')
         cancelRequestId= response.body.data.requestId
     })
@@ -91,7 +91,7 @@ describe('Transaction Cancellation Routes', () => {
             .set('Authorization', `Bearer ${adminToken}`)
             .expect(200)
            
-        expect(response.body.status).toBe('Success')    
+        expect(response.body.success).toBe(true)    
         expect(response.body.data.cancelRequests).toBeDefined()    
     })
 
@@ -101,7 +101,7 @@ describe('Transaction Cancellation Routes', () => {
             .set('Authorization', `Bearer ${adminToken}`)
             .send({adminReason: 'your cancellation request is approved'})
             .expect(200)
-        expect(response.body.status).toBe('Success')        
+        expect(response.body.success).toBe(true)        
         expect(response.body.message).toContain('cancellation approved')        
     })
 
@@ -111,7 +111,7 @@ describe('Transaction Cancellation Routes', () => {
             .set('Authorization', `Bearer ${adminToken}`)
             .send({adminReason: 'your cancellation request is rejected'})
             .expect(200)
-        expect(response.body.status).toBe('Success')        
+        expect(response.body.success).toBe(true)        
         expect(response.body.message).toContain('cancellation rejected')     
     })
 

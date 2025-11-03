@@ -49,4 +49,9 @@ const transactionSchema= mongoose.Schema({
     }
 }, {timestamps: true, versionKey: false})
 
+transactionSchema.index({ wallet: 1, createdAt: -1 });
+transactionSchema.index({ status: 1 });
+transactionSchema.index({ to: 1 });
+
+
 module.exports= mongoose.model('Transaction',transactionSchema)

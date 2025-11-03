@@ -71,7 +71,7 @@ describe('Wallet API Tests', () => {
                 .set('Authorization', `Bearer ${token}`)
                 .send({pin: '1234', currency: 'EGP'})
                 .expect(201)
-            expect(response.body.status).toBe('Success')
+            expect(response.body.success).toBe(true)
             expect(response.body.message).toContain('created')
             expect(response.body.message).toContain('created')
             expect(response.body.data.wallet).toBeDefined()
@@ -84,7 +84,7 @@ describe('Wallet API Tests', () => {
                 .send({pin: 12345,currency: 'USD'})
                 .expect(401)
 
-            expect(response.body.status).toBe('Error')
+            expect(response.body.success).toBe(false)
             expect(response.body.message).toContain('Authorization') 
         })
 
@@ -94,7 +94,7 @@ describe('Wallet API Tests', () => {
                 .set('Authorization',`Bearer ${token}`)
                 .send({pin: '', currency: ''})
                 .expect(400)
-            expect(response.body.status).toBe('Error')  
+            expect(response.body.success).toBe(false)  
             expect(response.body.message).toContain('empty')
         })
 
@@ -104,7 +104,7 @@ describe('Wallet API Tests', () => {
                 .set('Authorization',`Bearer ${token}`)
                 .send({pin: '1231432545345', currency: 'sss'})
                 .expect(400)
-            expect(response.body.status).toBe('Error')  
+            expect(response.body.success).toBe('Error')  
             expect(response.body.message).toContain('must be')
         })
     })
@@ -116,7 +116,7 @@ describe('Wallet API Tests', () => {
                 .get('/wallets')
                 .set('Authorization', `Bearer ${token}`)
                 .expect(200)
-            expect(response.body.status).toBe('Success'),
+            expect(response.body.success).toBe(true),
             expect(response.body.data.wallets).toBeDefined()    
         })
         it('should fail without authentication', async () => {
@@ -133,7 +133,7 @@ describe('Wallet API Tests', () => {
                 .get('/wallets')
                 .set('Authorization', `Bearer ${newToken.token}`)
                 .expect(200)
-            expect(response.body.status).toBe('Success')
+            expect(response.body.success).toBe(true)
             expect(response.body.data.wallets.length).toBe(0)
         })
     })
@@ -152,7 +152,7 @@ describe('Wallet API Tests', () => {
                 .set('Authorization',`Bearer ${token}`)
                 .expect(200)
             
-            expect(response.body.status).toBe('Success')
+            expect(response.body.success).toBe(true)
             expect(response.body.data.wallet._id).toBe(walletId)        
         })
 
@@ -186,7 +186,7 @@ describe('Wallet API Tests', () => {
                 .set('Authorization', `Bearer ${token}`)
                 .send({amount: despositAmount})
                 .expect(200)
-            expect(response.body.status).toBe('Success')
+            expect(response.body.success).toBe(true)
             expect(response.body.data.wallet.balance).toBe(despositAmount)
         })
         it('should fail with negative amount', async () => {
@@ -267,7 +267,7 @@ describe('Wallet API Tests', () => {
                 .set('Authorization',`Bearer ${token}`)
                 .send({pin: '1235',amount: 200})
                 .expect(200)
-            expect(response.body.status).toBe('Success')
+            expect(response.body.success).toBe(true)
             expect(response.body.data.wallet.balance).toBe(300)    
         })
 
@@ -277,7 +277,7 @@ describe('Wallet API Tests', () => {
                 .set('Authorization',`Bearer ${token}`)
                 .send({pin: '1235',amount: 1000})
                 .expect(400)
-            expect(response.body.status).toBe('Error')
+            expect(response.body.success).toBe(false)
             expect(response.body.message).toContain('Insufficient')    
         })
          it('should fail with zero amount', async () => {
@@ -349,7 +349,7 @@ describe('Wallet API Tests', () => {
                 .set('Authorization' , `Bearer ${senderToken}`)
                 .send({recipientWalletId,amount: transferAmount})
                 .expect(200)
-            expect(response.body.status).toBe('Success');
+            expect(response.body.success).toBe(true);
             expect(response.body.data.senderTransaction).toBeDefined()   
             expect(response.body.data.senderTransaction.type).toBe('transfer_out')   
             expect(response.body.data.senderTransaction.amount).toBe(transferAmount);

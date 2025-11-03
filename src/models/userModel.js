@@ -1,5 +1,4 @@
 const mongoose=require('mongoose');
-const validator= require('validator');
 const userSchema= new mongoose.Schema({
    name: {
         type: String,
@@ -11,10 +10,6 @@ const userSchema= new mongoose.Schema({
         required: [true, "Email is required"],
         unique: true,
         lowercase: true,
-        validate: {
-            validator: validator.isEmail,
-            message: "Please provide a valid email address"
-        }
     },
     phone: {
             type: String,
@@ -51,6 +46,8 @@ const userSchema= new mongoose.Schema({
      resetPasswordExpires: Date
 
 }, { timestamps: true,versionKey: false});
+
+userSchema.index({ verificationToken: 1 });
 
 const User= mongoose.model('User', userSchema);
 module.exports= User;

@@ -1,21 +1,28 @@
 const express=require('express')
 const router= express.Router()
 const verifyToken= require('../middlewares/verifyToken')
-const controller= require('../controllers/walletController')
+const {getTransaction
+    ,getCancellationRequests,
+    getTransactionHistory,
+    approveCanellation,
+    rejectCancellation,
+    requestTransactionCancellation
+}= require('../controllers/walletController')
+
 const requireAdmin= require('../middlewares/verifyRole')
+const { walletReadLimiter } = require('../middlewares/rateLimit')
 
 
-router.post('/cancel-request/:id',verifyToken,controller.requestTransactionCancellation)
-// admin 
-router.get('/cancel-requests',verifyToken,requireAdmin,controller.getCancellationRequests)
-router.post('/cancel-approve/:id',verifyToken,requireAdmin,controller.approveCanellation)
-router.post('/cancel-reject/:id',verifyToken,requireAdmin,controller.rejectCancellation)
+router.post('/cancel-request/:id',walletReadLimiter,verifyToken,requestTransactionCancellation)
+
+router.get('/cancel-requests',verifyToken,requireAdmin,getCancellationRequests)
+router.post('/cancel-approve/:id',verifyToken,requireAdmin,approveCanellation)
+router.post('/cancel-reject/:id',verifyToken,requireAdmin,rejectCancellation)
 
 
 
-// user
-router.get('/history', verifyToken, controller.getTransactionHistory);
-router.get('/:id',verifyToken,controller.getTransaction)
+router.get('/history', walletReadLimiter,verifyToken, getTransactionHistory);
+router.get('/:id',walletReadLimiter,verifyToken,getTransaction)
 
 
 

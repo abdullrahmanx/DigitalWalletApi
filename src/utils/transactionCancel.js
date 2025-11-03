@@ -7,6 +7,7 @@ const processCancellation= async (transaction, session) => {
                 { $inc: { balance : -transaction.amount}},
                 {session}
             );
+        break;    
         case 'withdraw':
             await Wallet.findByIdAndUpdate(transaction.wallet,
                 { $inc: {balance: +transaction.amount}},

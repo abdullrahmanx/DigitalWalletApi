@@ -1,20 +1,28 @@
 const express= require('express');
 const router= express.Router();
-const controller= require('../controllers/userController');
+const {signUp,
+    login,
+    logout,
+    changePassword
+    ,forgotPassword,
+    resetPassword,
+    refresh,
+    verifyEmail,
+} = require('../controllers/userController')
+const {authLimiter}= require('../middlewares/rateLimit')
 const verifyToken = require('../middlewares/verifyToken');
 const { validateSignup, validateLogin } = require('../middlewares/userValidation');
-const { authLimiter } = require('../middlewares/rateLimit');
 
 router.use(authLimiter)
 
-router.post('/register', validateSignup,controller.signUp);
-router.get('/verify-email/:token', controller.verifyEmail)
-router.post('/login',validateLogin,controller.login)
-router.post('/logout',controller.logout)
-router.put('/password',verifyToken,controller.changePassword)
-router.post('/forgot-password',controller.forgotPassword)
-router.post('/reset-password/:token',controller.resetPassword)
-router.post('/refresh-token',controller.refresh)
+router.post('/register', validateSignup,signUp);
+router.get('/verify-email/:token', verifyEmail)
+router.post('/login',validateLogin,login)
+router.post('/logout',logout)
+router.put('/password',verifyToken,changePassword)
+router.post('/forgot-password',forgotPassword)
+router.post('/reset-password/:token',resetPassword)
+router.post('/refresh-token',refresh)
 
 
 
